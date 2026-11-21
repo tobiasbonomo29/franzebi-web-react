@@ -1,0 +1,25 @@
+node_modules/
+.next/
+out/
+dist/
+coverage/
+playwright-report/
+test-results/
+*.log
+
+# Secretos: NUNCA versionar
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+supabase/.temp/
+supabase/.branches/
+
+# Exportaciones con datos personales (clientes/pedidos) — viven fuera del repo
+exports/
+data/private/
+
+# Vercel (vínculo local)
+.vercel
+*.tsbuildinfo

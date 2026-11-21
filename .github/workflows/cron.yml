@@ -1,0 +1,27 @@
+# Crons frecuentes sin depender del plan de Vercel (Hobby sólo permite 1 vez por día).
+# Requiere en GitHub → Settings → Secrets and variables → Actions:
+#   APP_URL      p.ej. https://franzebi.ar (o la URL de staging)
+#   CRON_SECRET  el mismo valor que en Vercel
+# Si los secretos no están, el job termina sin hacer nada.
+name: cron
+on:
+  schedule:
+    - cron: "*/15 * * * *" # sync Alegra (escribe sólo si SYNC_ALLOW_APPLY=true en el servidor)
+    - cron: "*/5 * * * *" # outbox de pedidos (sale sólo si ORDER_DISPATCH_ENABLED=true)
+  workflow_dispatch: {}
+
+jobs:
+  tick:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Llamar endpoints
+        env:
+          APP_URL: ${{ secrets.APP_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          SCHEDULE: ${{ github.event.schedule }}
+        run: |
+          if [ -z "$APP_URL" ] || [ -z "$CRON_SECRET" ]; then echo "Secretos no configurados; nada que hacer."; exit 0; fi
+          call() { code=$(curl -s -o /tmp/r.json -w '%{http_code}' --max-time 300 -H "Authorization: Bearer $CRON_SECRET" "$APP_URL$1"); echo "$1 -> $code"; head -c 500 /tmp/r.json; echo; [ "$code" -lt 500 ]; }
+          if [ "$SCHEDULE" = "*/15 * * * *" ] || [ -z "$SCHEDULE" ]; then call /api/cron/sync/; fi
+          call /api/cron/orders/

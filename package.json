@@ -1,0 +1,32 @@
+{
+  "name": "franzebi-commerce",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Franzebi Imports — ecommerce propio (Next.js + Node + Supabase) que reemplaza WordPress/WooCommerce.",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc -p packages/domain && tsc -p packages/sync",
+    "dev": "npm run dev -w @franzebi/web",
+    "build": "npm run build -w @franzebi/web",
+    "e2e": "playwright test",
+    "sync:dry-run": "node --env-file=.env.local --import tsx packages/sync/src/cli.ts --dry-run",
+    "secrets:scan": "node scripts/scan-secrets.mjs",
+    "test:db": "node supabase/tests/rls.test.mjs"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.5.17",
+    "@playwright/test": "^1.48.0",
+    "@types/node": "^22.9.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.5"
+  }
+}

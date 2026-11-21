@@ -1,0 +1,15 @@
+# Nunca subir secretos ni datos exportados a Vercel
+.env
+.env.*
+!.env.example
+exports/
+data/private/
+node_modules/
+**/node_modules/
+.next/
+**/.next/
+test-results/
+playwright-report/
+coverage/
+*.tsbuildinfo
+supabase/.temp/
