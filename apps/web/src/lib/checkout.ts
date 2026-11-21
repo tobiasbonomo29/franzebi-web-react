@@ -43,7 +43,13 @@ export const placeSchema = quoteSchema.extend({
     phone: z.string().trim().min(6).max(40),
     dni: z.string().trim().regex(/^\d{7,9}$/, "DNI inválido"),
   }),
-  address: z.object({ street: z.string().trim().max(160), number: z.string().trim().max(20), apartment: z.string().trim().max(40).optional() }).optional(),
+  address: z.object({
+    street: z.string().trim().max(160),
+    number: z.string().trim().max(20),
+    apartment: z.string().trim().max(40).optional(),
+    // Envíos Correo "a sucursal": sucursal elegida (como el selector del plugin de WP)
+    agency: z.object({ code: z.string().trim().max(20), name: z.string().trim().max(160) }).optional(),
+  }).optional(),
   note: z.string().trim().max(500).optional(),
   // El cliente confirma el total que vio; si el servidor calcula otro (cambió stock/precio), se rechaza para re-confirmar.
   expectedTotalCents: z.number().int().nonnegative(),
@@ -111,7 +117,9 @@ export async function placeOrder(input: z.infer<typeof placeSchema>) {
   if (c.totals.payment !== input.paymentMethod) throw new CheckoutError("invalid_payment", c.totals.paymentNotice ?? "El medio de pago no está disponible para esta entrega.");
   if (c.totals.issues.length) throw new CheckoutError("cart_changed", "Tu carrito cambió (stock o disponibilidad). Revisalo antes de confirmar.", 409, c.totals.issues);
   if (c.totals.totalCents !== input.expectedTotalCents) throw new CheckoutError("total_changed", "El total se actualizó. Revisá el resumen y confirmá nuevamente.", 409, { totalCents: c.totals.totalCents });
-  if (c.totals.shipping.kind !== "local_pickup" && !input.address?.street) throw new CheckoutError("address_required", "Ingresá la dirección de entrega", 422);
+  const toBranch = c.totals.shipping.kind === "correo_argentino" && /_s$/.test(c.totals.shipping.id);
+  if (toBranch && !input.address?.agency?.code) throw new CheckoutError("agency_required", "Elegí la sucursal de Correo Argentino donde vas a retirar el envío", 422);
+  if (c.totals.shipping.kind !== "local_pickup" && !toBranch && !input.address?.street) throw new CheckoutError("address_required", "Ingresá la dirección de entrega", 422);
 
   const status = initialOrderStatus(c.totals.payment, cfg.payments);
   const items = c.totals.lines.map((l) => {

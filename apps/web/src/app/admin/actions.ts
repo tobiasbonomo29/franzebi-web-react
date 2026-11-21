@@ -37,7 +37,7 @@ export async function actionResolveError(formData: FormData) {
 export async function actionOrderStatus(formData: FormData) {
   const actor = await requireStaff();
   await changeOrderStatus(actor, String(formData.get("orderId")), String(formData.get("status")));
-  revalidatePath("/admin/pedidos/");
+  revalidatePath("/admin/pedidos/", "layout");
 }
 
 export async function actionValidatePayment(formData: FormData) {
@@ -46,7 +46,7 @@ export async function actionValidatePayment(formData: FormData) {
   const db = adminClient();
   await db.from("payment_attempts").update({ status: "approved", validated_by: actor.id, validated_at: new Date().toISOString() }).eq("order_id", orderId).eq("status", "awaiting_validation");
   await changeOrderStatus(actor, orderId, "processing");
-  revalidatePath("/admin/pedidos/");
+  revalidatePath("/admin/pedidos/", "layout");
 }
 
 export async function actionSetSaleMode(formData: FormData) {
@@ -75,6 +75,7 @@ export async function actionRetryOrderEvent(formData: FormData) {
   await adminClient().from("order_events").update({ status: "pending", next_attempt_at: new Date().toISOString(), last_error: null }).eq("id", id).in("status", ["failed", "dead"]);
   await audit(actor, "order_event_retry", "order_events", String(id));
   revalidatePath("/admin/sync/");
+  revalidatePath("/admin/pedidos/", "layout");
 }
 
 export async function actionSetPublished(formData: FormData) {
@@ -84,4 +85,76 @@ export async function actionSetPublished(formData: FormData) {
   await adminClient().from("products").update({ published }).eq("id", id);
   await audit(actor, published ? "product_publish" : "product_unpublish", "products", id);
   revalidatePath("/admin/productos/");
+}
+
+// ---------------------------------------------------------------------------
+// Detalle de pedido: notas, seguimiento y Correo Argentino
+// ---------------------------------------------------------------------------
+export async function actionAddOrderNote(formData: FormData) {
+  const actor = await requireStaff();
+  const orderId = String(formData.get("orderId"));
+  const note = String(formData.get("note") ?? "").trim().slice(0, 2000);
+  if (!note) return;
+  const customerVisible = formData.get("customer") === "on";
+  await adminClient().from("order_notes").insert({ order_id: orderId, author_id: actor.id, author_email: actor.email, note, customer_visible: customerVisible });
+  await audit(actor, "order_note", "orders", orderId, { customerVisible });
+  revalidatePath(`/admin/pedidos/${formData.get("number")}/`);
+}
+
+export async function actionSetTracking(formData: FormData) {
+  const actor = await requireStaff();
+  const orderId = String(formData.get("orderId"));
+  const tracking = String(formData.get("tracking") ?? "").trim().slice(0, 60) || null;
+  const db = adminClient();
+  await db.from("orders").update({ tracking_number: tracking, shipped_at: tracking ? new Date().toISOString() : null }).eq("id", orderId);
+  if (tracking) await db.from("order_notes").insert({ order_id: orderId, author_id: actor.id, author_email: actor.email, note: `Número de seguimiento: ${tracking}`, customer_visible: true });
+  await audit(actor, "order_tracking", "orders", orderId, { tracking });
+  revalidatePath(`/admin/pedidos/${formData.get("number")}/`);
+}
+
+export async function actionCorreoImport(formData: FormData) {
+  const actor = await requireStaff();
+  const orderId = String(formData.get("orderId"));
+  const { MiCorreoClient, DEFAULT_CORREO_SENDER } = await import("@/lib/correo");
+  const db = adminClient();
+  const note = (text: string) => db.from("order_notes").insert({ order_id: orderId, author_id: actor.id, author_email: actor.email, note: text, customer_visible: false });
+  const client = MiCorreoClient.fromEnvClient();
+  if (!client) {
+    await note("Correo Argentino: no se pudo importar, faltan credenciales de la API MiCorreo (CORREO_API_USER / CORREO_API_PASSWORD).");
+    revalidatePath(`/admin/pedidos/${formData.get("number")}/`);
+    return;
+  }
+  const { data: o } = await db.from("orders").select("*, order_items(quantity, line_total_cents, products(weight_kg, length_cm, width_cm, height_cm))").eq("id", orderId).single();
+  if (!o || o.delivery_kind !== "correo_argentino") return;
+  const b = (o.billing ?? {}) as Record<string, string>;
+  const s = (o.shipping_address ?? {}) as Record<string, string> & { agency?: { code: string } };
+  const items = o.order_items as Array<{ quantity: number; line_total_cents: number; products: { weight_kg: number | null; length_cm: number | null; width_cm: number | null; height_cm: number | null } | null }>;
+  // Mismo criterio que la cotización: fallback 1 kg y 20x15x10 por unidad sin datos
+  const weightG = items.reduce((sum, i) => sum + (Number(i.products?.weight_kg) || 1) * 1000 * i.quantity, 0);
+  const dims = {
+    length: Math.max(...items.map((i) => Number(i.products?.length_cm) || 20)),
+    width: Math.max(...items.map((i) => Number(i.products?.width_cm) || 15)),
+    height: Math.min(150, items.reduce((sum, i) => sum + (Number(i.products?.height_cm) || 10) * i.quantity, 0)),
+  };
+  const toBranch = /_s$/.test(o.delivery_option_id);
+  try {
+    const r = await client.importShipment({
+      number: Number(o.number),
+      recipient: { name: `${b.firstName ?? ""} ${b.lastName ?? ""}`.trim(), email: o.email, phone: b.phone ?? "" },
+      deliveryType: toBranch ? "S" : "D",
+      agencyCode: s.agency?.code ?? null,
+      address: { street: [s.street, s.number].filter(Boolean).join(" "), apartment: s.apartment, city: s.city ?? "", provinceCode: s.state ?? "", postcode: s.postcode ?? "" },
+      productType: /expreso/i.test(o.delivery_label) ? "EP" : "CP",
+      weightG,
+      dims,
+      declaredValue: Number(o.subtotal_cents) / 100,
+      sender: DEFAULT_CORREO_SENDER,
+    });
+    await db.from("orders").update({ external_refs: { ...((o.external_refs as Record<string, string>) ?? {}), correo: r?.createdAt ?? "importado" }, ...(r?.trackingNumber ? { tracking_number: r.trackingNumber, shipped_at: new Date().toISOString() } : {}) }).eq("id", orderId);
+    await note(`Envío importado en MiCorreo${r?.trackingNumber ? ` (seguimiento ${r.trackingNumber})` : ""}.`);
+    await audit(actor, "correo_import", "orders", orderId, { tracking: r?.trackingNumber ?? null });
+  } catch (e) {
+    await note(`Correo Argentino: error al importar — ${(e as Error).message.slice(0, 300)}`);
+  }
+  revalidatePath(`/admin/pedidos/${formData.get("number")}/`);
 }

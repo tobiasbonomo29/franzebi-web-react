@@ -1,0 +1,22 @@
+/*
+         * El z-index del panel estaba limitado por el widget padre (1000),
+         * mientras la navegacion usa 100000. Elevar solo el carrito abierto.
+         */
+        body .elementor-widget-woocommerce-menu-cart.elementor-menu-cart--shown {
+            position: relative !important;
+            z-index: 2147483002 !important;
+        }
+
+        body .elementor-menu-cart__container,
+        body .elementor-menu-cart__container.elementor-lightbox,
+        body .elementor-menu-cart--shown .elementor-menu-cart__container {
+            position: fixed !important;
+            z-index: 2147482998 !important;
+        }
+
+        body .elementor-menu-cart__container .elementor-menu-cart__main,
+        body .elementor-menu-cart__main {
+            position: fixed !important;
+            z-index: 2147483001 !important;
+            background: #fff !important;
+        }

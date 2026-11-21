@@ -32,3 +32,17 @@ Plantilla en [`.env.example`](../.env.example). **Ningún valor real va en el re
 
 - `CRON_SECRET` y `CART_TOKEN_SECRET`: rotar si hay sospecha de filtración. Rotar `CART_TOKEN_SECRET` invalida los carritos de invitado y los links de pedido.
 - `SUPABASE_SERVICE_ROLE_KEY`: rotar desde el panel de Supabase.
+
+### Agregadas el 2026-11-21 (réplica de diseño, facturación y Correo)
+
+| Variable | Ámbito | Requerida | Descripción |
+|---|---|---|---|
+| `LEGACY_MEDIA_ORIGIN` | servidor | staging | Origen de las fotos `/wp-content/uploads/` que no están en `public/`. En staging es `https://franzebi.ar`. Antes del cutover apunta al bucket donde se copien (D-29) |
+| `ALEGRA_INVOICE_PRICE_LIST_ID` | servidor | sink alegra | Id de la lista "MINORISTA" (`019d6e8d-637f-7770-a791-2dda1f9f827b`) |
+| `ALEGRA_INVOICE_WHOLESALE_PRICE_LIST_ID` | servidor | no | Id de "MAYORISTA" (`019d6e7c-6b31-7616-bebd-f75c10c5c4c0`) |
+| `ALEGRA_INVOICE_NUMBER_TEMPLATE_ID` | servidor | no | Numeración "TICKET" (`3`) |
+| `ALEGRA_INVOICE_WAREHOUSE_ID` | servidor | no | Depósito "Principal" (`1`) |
+| `ALEGRA_INVOICE_SHIPPING_ITEM_ID` | servidor | no | Ítem "ENVIO" si se decide facturar el envío (AstroSelling hoy no lo hace) |
+| `ALEGRA_INVOICE_STATUS` | servidor | no | `draft` (default: queda como borrador para revisar) u `open` |
+| `CORREO_CUSTOMER_ID` / `CORREO_ORIGIN_POSTCODE` | servidor | envíos | `0001541970` / `1431` (tomados del plugin de WP) |
+| `CORREO_API_USER` / `CORREO_API_PASSWORD` | servidor | envíos | Credenciales de la **API** MiCorreo: hay que pedirlas a Correo Argentino (D-28) |

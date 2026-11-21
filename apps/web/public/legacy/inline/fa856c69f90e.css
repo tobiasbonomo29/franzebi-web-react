@@ -1,0 +1,47 @@
+.franzebi-mayorista-points {
+            margin: 16px 0;
+            padding: 14px 16px;
+            border-radius: 8px;
+            border: 1px solid #d9e1ec;
+            background: #f7f9fc;
+            color: #10233d;
+            font-size: 14px;
+            line-height: 1.35;
+        }
+        .franzebi-mayorista-points.is-qualified {
+            border-color: #7a008a;
+            background: #fbf4fd;
+        }
+        .franzebi-mayorista-points strong {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 700;
+        }
+        .franzebi-mayorista-points p {
+            margin: 0 0 8px;
+        }
+        .franzebi-mayorista-points ul {
+            margin: 0;
+            padding-left: 18px;
+        }
+        .franzebi-mayorista-points li {
+            margin: 2px 0;
+        }
+        .franzebi-mayorista-points small {
+            display: block;
+            margin-top: 8px;
+            color: #526173;
+        }
+        @media (max-width: 767px) {
+            body.woocommerce-cart .franzebi-mayorista-points,
+            body.woocommerce-checkout .franzebi-mayorista-points {
+                width: calc(100vw - 32px) !important;
+                max-width: calc(100vw - 32px) !important;
+                margin-left: auto !important;
+                margin-right: auto !important;
+                box-sizing: border-box !important;
+            }
+            body.woocommerce-checkout .franzebi-mayorista-points {
+                margin-left: calc(50% - 50vw + 16px) !important;
+            }
+        }

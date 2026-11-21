@@ -1,0 +1,47 @@
+@media (max-width: 767px) {
+        body.woocommerce-checkout table.woocommerce-checkout-review-order-table thead {
+            display: none !important;
+        }
+        body.woocommerce-checkout #order_review,
+        body.woocommerce-checkout #order_review *,
+        body.woocommerce-checkout .woocommerce-checkout-review-order-table,
+        body.woocommerce-checkout .woocommerce-checkout-review-order-table *,
+        body.woocommerce-checkout #shipping_method,
+        body.woocommerce-checkout #shipping_method * {
+            color: #071f38 !important;
+            opacity: 1 !important;
+        }
+        body.woocommerce-checkout #shipping_method .fz-ship-help {
+            color: #4f5f6f !important;
+            font-weight: 500 !important;
+        }
+        body.woocommerce-checkout .wc_payment_methods > li,
+        body.woocommerce-checkout .wc_payment_methods > li label,
+        body.woocommerce-checkout .wc_payment_methods > li strong {
+            color: #071f38 !important;
+            opacity: 1 !important;
+        }
+        body.woocommerce-checkout .payment_box,
+        body.woocommerce-checkout .payment_box p {
+            color: #334155 !important;
+            opacity: 1 !important;
+            font-weight: 500 !important;
+        }
+        body.woocommerce-checkout .woocommerce-checkout-payment {
+            padding-bottom: 18px !important;
+        }
+        body.woocommerce-checkout #place_order {
+            background: #76008c !important;
+            border-color: #76008c !important;
+            color: #fff !important;
+            opacity: 1 !important;
+            filter: none !important;
+            margin-bottom: 28px !important;
+        }
+        body.woocommerce-checkout table.woocommerce-checkout-review-order-table tr.cart_item td.product-total,
+        body.woocommerce-checkout table.woocommerce-checkout-review-order-table tr.cart-subtotal td,
+        body.woocommerce-checkout table.woocommerce-checkout-review-order-table tr.order-total td {
+            margin-left: auto !important;
+            text-align: right !important;
+        }
+    }

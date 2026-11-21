@@ -1,17 +1,10 @@
 import type { Metadata } from "next";
+import { LegacyPage } from "@/components/LegacyPage";
+import { template } from "@/lib/legacy/templates";
 
-export const metadata: Metadata = { title: "Contacto", alternates: { canonical: "/contacto/" } };
+export const metadata: Metadata = { title: { absolute: template("contacto").title }, alternates: { canonical: "/contacto/" } };
 
+/** Contacto (Elementor 16689). El formulario se envía a /api/contacto/ (fz.js) y llega a Franzebi.imports@gmail.com. */
 export default function Contacto() {
-  return (
-    <div className="container" style={{ maxWidth: 720 }}>
-      <h1>Contacto</h1>
-      <ul style={{ lineHeight: 2 }}>
-        <li>WhatsApp: <a href="https://wa.me/5491128720954" rel="noopener">+54 9 11 2872-0954</a></li>
-        <li>Email: <a href="mailto:franzebi.imports@gmail.com">franzebi.imports@gmail.com</a></li>
-        <li>Instagram: <a href="https://www.instagram.com/franzebi.imports/" rel="noopener">@franzebi.imports</a></li>
-      </ul>
-      <a className="btn btn-wa" href="https://wa.me/5491128720954" rel="noopener">Escribinos por WhatsApp</a>
-    </div>
-  );
+  return <LegacyPage name="contacto" />;
 }

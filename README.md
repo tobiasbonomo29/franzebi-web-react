@@ -28,7 +28,7 @@ scripts/          gen-seed, scan-secrets
 
 ```bash
 npm install
-npm test                 # 81 tests de dominio, sync y outbox
+npm test                 # 95 tests de dominio, sync, outbox y facturación Alegra
 npm run test:db          # 34 verificaciones de esquema, RLS y transacciones (PGlite)
 npm run typecheck
 npm run secrets:scan
@@ -36,4 +36,12 @@ npx tsx scripts/gen-seed.ts   # regenera supabase/seed.sql desde los defaults de
 npm run sync:dry-run     # requiere .env.local con credenciales de Alegra (no escribe nada)
 npm run dev              # app en http://localhost:3000 (requiere Supabase)
 E2E_BASE_URL=https://staging... npm run e2e
+
+# Diseño heredado de franzebi.ar (sólo GET al sitio actual)
+node scripts/mirror-legacy.mjs            # captura CSS/JS/imágenes/HTML de cada tipo de página
+node scripts/build-legacy-templates.mjs   # genera las plantillas con marcadores
+
+# Fichas de Woo (slug, fotos, categorías, descripciones) sobre los productos de Alegra
+node --env-file=.env.local --import tsx scripts/import-woo-catalog.mts                # dry-run
+IMPORT_ALLOW_APPLY=true node --env-file=.env.local --import tsx scripts/import-woo-catalog.mts --apply
 ```

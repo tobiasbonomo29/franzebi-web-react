@@ -1,0 +1,13 @@
+.elementor-location-header,
+        .elementor-location-header .elementor-element.elementor-widget-nav-menu,
+        .elementor-location-header .elementor-nav-menu--main,
+        .elementor-location-header .elementor-nav-menu {
+            position: relative;
+            z-index: 100000 !important;
+        }
+
+        .elementor-location-header .elementor-nav-menu--dropdown,
+        .elementor-location-header .elementor-nav-menu .sub-menu,
+        .elementor-location-header .elementor-nav-menu--main .sub-menu {
+            z-index: 100001 !important;
+        }

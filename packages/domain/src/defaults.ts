@@ -10,18 +10,18 @@ import type { WholesaleRules } from "./wholesale.js";
  */
 
 export const DEFAULT_SHIPPING: ShippingConfig = {
-  pickup: { label: "Retiro por el local" },
+  pickup: { label: "Retirar por el Local" },
   // D-07 resuelto (2026-11-21): $12.000.
-  scheduledCaba: { enabled: true, label: "Horario específico CABA (coordinar horario)", priceCents: 1200000 },
+  scheduledCaba: { enabled: true, label: "HORARIO ESPECIFICO CABA (coordinar horario)", priceCents: 1200000 },
   correoFallbackPackage: { weightKg: 1, lengthCm: 20, widthCm: 15, heightCm: 10 },
   // D-06 resuelto (2026-11-21): Burzaco se excluye.
   excludedCities: ["general rodriguez", "san vicente", "canuelas", "marcos paz", "mariano acosta", "burzaco"],
   excludedPostcodes: [1723, 1727, 1748, 1814, 1852, 1865],
   motoZones: [
-    { id: "verde", label: "Moto CABA (entrega 16 a 22 hs)", priceCents: 400000, caba: true, sameDayEligible: true },
+    { id: "verde", label: "MOTO CABA (entrega 16 a 22 hs)", priceCents: 400000, caba: true, sameDayEligible: true },
     {
       id: "negra",
-      label: "Moto primer cordón",
+      label: "MOTO ZONA NEGRA / GRIS (primer cordon)",
       priceCents: 600000,
       sameDayEligible: true,
       postcodeRanges: [[1500, 1893]],
@@ -41,7 +41,7 @@ export const DEFAULT_SHIPPING: ShippingConfig = {
     },
     {
       id: "azul",
-      label: "Moto zona azul",
+      label: "MOTO ZONA AZUL",
       priceCents: 800000,
       sameDayEligible: true,
       postcodeRanges: [[1500, 1893]],
@@ -61,7 +61,7 @@ export const DEFAULT_SHIPPING: ShippingConfig = {
     },
     {
       id: "roja",
-      label: "Moto zona roja",
+      label: "MOTO ZONA ROJA",
       priceCents: 950000,
       sameDayEligible: true,
       postcodeRanges: [[1894, 1930], [2790, 2820], [6600, 6750]],
@@ -78,7 +78,7 @@ export const DEFAULT_SHIPPING: ShippingConfig = {
 export const DEFAULT_PAYMENTS: PaymentsConfig = {
   bankTransfer: {
     enabled: true,
-    label: "Transferencia bancaria",
+    label: "Transferencia Bancaria",
     instructions: "Realizá el pago a nuestra cuenta usando el número de pedido como referencia. El pedido queda En espera hasta validar el pago.",
   },
   cash: {

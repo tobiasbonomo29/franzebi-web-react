@@ -56,3 +56,23 @@ export async function sendOrderEmails(o: OrderMail): Promise<{ sent: boolean; er
     return { sent: false, error: (err as Error).message };
   }
 }
+
+/** Formulario de Contacto -> casilla del negocio (ORDER_NOTIFY_TO, default Franzebi.imports@gmail.com). */
+export async function sendContactEmail(m: { name: string; email: string; message: string }): Promise<{ sent: boolean; error?: string }> {
+  const t = tx();
+  if (!t) return { sent: false, error: "SMTP no configurado" };
+  const e = env();
+  try {
+    await t.sendMail({
+      from: e.SMTP_FROM,
+      to: e.ORDER_NOTIFY_TO,
+      replyTo: m.email,
+      subject: `Contacto web — ${m.name}`,
+      html: `<div style="font-family:Arial,sans-serif"><p><b>Nombre:</b> ${esc(m.name)}<br><b>Email:</b> ${esc(m.email)}</p><p>${esc(m.message).replace(/\n/g, "<br>")}</p></div>`,
+    });
+    return { sent: true };
+  } catch (err) {
+    console.error("[email] fallo contacto", (err as Error).name);
+    return { sent: false, error: (err as Error).message };
+  }
+}

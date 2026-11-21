@@ -1,0 +1,11 @@
+/* Ajustes mínimos para los reemplazos propios de la app (el resto lo pinta el CSS heredado de WP). */
+.fz-price-filter .bapf_slidr_all { display: flex; gap: .5rem; align-items: center; margin-bottom: .75rem; }
+.fz-price-filter .bapf_slidr_all > span { display: flex; align-items: center; gap: .25rem; flex: 1; }
+.fz-price-filter input[type="number"] { width: 100%; min-width: 0; }
+.fz-price-filter .bapf_button { width: 100%; }
+.fz-wholesale { margin-bottom: 1.5em; }
+.fz-wholesale-line { margin: .25em 0 0; }
+.woocommerce-ordering.active .woocommerce-ordering__submenu { display: block; }
+#fz-checkout-root .fz-field-error { color: #b81c23; font-size: .875em; margin: .25em 0 0; }
+#fz-checkout-root .fz-notice { margin-bottom: 1em; }
+#fz-checkout-root .wc_payment_method .payment_box p:last-child { margin-bottom: 0; }

@@ -19,6 +19,8 @@ export interface SyncOptions {
   placeholderOnImageError: boolean;
   imageLimits?: ImageLimits;
   maxPages?: number;
+  /** Escrituras en paralelo (default 8). */
+  concurrency?: number;
   onlySkus?: string[]; // reintentos puntuales
 }
 
@@ -85,6 +87,7 @@ export async function runCatalogSync(
   }
 
   const states = await store.getStates([...bySku.keys()]);
+  const work: Array<() => Promise<void>> = [];
 
   for (const [sku, recs] of bySku) {
     stats.seen++;
@@ -118,46 +121,56 @@ export async function runCatalogSync(
       continue;
     }
 
-    // Imágenes: validar antes de procesar
-    const valid: ValidatedImage[] = [];
-    let imageFailed = false;
-    for (const url of rec.imageUrls) {
-      try {
-        const res = await images.fetch(url);
-        if (res.status < 200 || res.status >= 300) throw Object.assign(new Error(`HTTP ${res.status} al descargar imagen`), { code: "image_http_error" });
-        const v = validateImage(res.bytes, res.contentType, opts.imageLimits ?? DEFAULT_IMAGE_LIMITS);
-        if (!v.ok) throw Object.assign(new Error(v.message), { code: `image_${v.code}` });
-        valid.push({ sourceUrl: url, sha256: createHash("sha256").update(res.bytes).digest("hex"), mime: v.mime, width: v.width, height: v.height, bytes: res.bytes });
-      } catch (e) {
-        imageFailed = true;
-        stats.imageErrors++;
-        stats.errors++;
-        await store.recordError(jobId, {
-          stage: "image", sku, code: (e as { code?: string }).code ?? "image_fetch_failed", message: `${rec.name}: ${(e as Error).message}`,
-          retryable: true, payloadSummary: { url: url.slice(0, 300) },
-        });
+    work.push(async () => {
+      // Imágenes: validar antes de procesar
+      const valid: ValidatedImage[] = [];
+      let imageFailed = false;
+      for (const url of rec.imageUrls) {
+        try {
+          const res = await images.fetch(url);
+          if (res.status < 200 || res.status >= 300) throw Object.assign(new Error(`HTTP ${res.status} al descargar imagen`), { code: "image_http_error" });
+          const v = validateImage(res.bytes, res.contentType, opts.imageLimits ?? DEFAULT_IMAGE_LIMITS);
+          if (!v.ok) throw Object.assign(new Error(v.message), { code: `image_${v.code}` });
+          valid.push({ sourceUrl: url, sha256: createHash("sha256").update(res.bytes).digest("hex"), mime: v.mime, width: v.width, height: v.height, bytes: res.bytes });
+        } catch (e) {
+          imageFailed = true;
+          stats.imageErrors++;
+          stats.errors++;
+          await store.recordError(jobId, {
+            stage: "image", sku, code: (e as { code?: string }).code ?? "image_fetch_failed", message: `${rec.name}: ${(e as Error).message}`,
+            retryable: true, payloadSummary: { url: url.slice(0, 300) },
+          });
+        }
       }
-    }
-    // Placeholder sólo si el origen trajo imágenes y TODAS fallaron. Si el origen no trae imágenes (Alegra hoy),
-    // `valid` queda vacío y el store conserva las fotos existentes (migradas de Woo o cargadas en el admin).
-    const usePlaceholder = imageFailed && valid.length === 0 && opts.placeholderOnImageError;
-    if (usePlaceholder) stats.placeholders++;
+      // Placeholder sólo si el origen trajo imágenes y TODAS fallaron. Si el origen no trae imágenes (Alegra hoy),
+      // `valid` queda vacío y el store conserva las fotos existentes (migradas de Woo o cargadas en el admin).
+      const usePlaceholder = imageFailed && valid.length === 0 && opts.placeholderOnImageError;
+      if (usePlaceholder) stats.placeholders++;
 
-    const action = prev ? "update" : "create";
-    plan.push({ sku, action, reason: imageFailed ? "with_image_errors" : undefined });
-    if (opts.dryRun) {
-      action === "create" ? stats.created++ : stats.updated++;
-      continue;
-    }
-    try {
-      // Si hubo errores de imagen se guarda un hash "pendiente" para que la próxima corrida reintente sola.
-      const r = await store.upsertProduct(rec, imageFailed ? `${hash}:image-retry` : hash, valid, usePlaceholder);
-      r.created ? stats.created++ : stats.updated++;
-    } catch (e) {
-      stats.errors++;
-      await store.recordError(jobId, { stage: "persist", sku, code: "persist_failed", message: (e as Error).message, retryable: true });
-    }
+      const action = prev ? "update" : "create";
+      plan.push({ sku, action, reason: imageFailed ? "with_image_errors" : undefined });
+      if (opts.dryRun) {
+        action === "create" ? stats.created++ : stats.updated++;
+        return;
+      }
+      try {
+        // Si hubo errores de imagen se guarda un hash "pendiente" para que la próxima corrida reintente sola.
+        const r = await store.upsertProduct(rec, imageFailed ? `${hash}:image-retry` : hash, valid, usePlaceholder);
+        r.created ? stats.created++ : stats.updated++;
+      } catch (e) {
+        stats.errors++;
+        await store.recordError(jobId, { stage: "persist", sku, code: "persist_failed", message: (e as Error).message, retryable: true });
+      }
+
+    });
   }
+
+  // Escritura con concurrencia limitada (cada SKU es independiente): ~8x más rápido que en serie.
+  const queue = [...work];
+  const lanes = Math.max(1, opts.concurrency ?? 8);
+  await Promise.all(Array.from({ length: Math.min(lanes, queue.length) }, async () => {
+    for (let job = queue.shift(); job; job = queue.shift()) await job();
+  }));
 
   if (!only) {
     const known = await store.listAllSkus();

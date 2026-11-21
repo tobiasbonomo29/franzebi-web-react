@@ -10,6 +10,17 @@ import type { CatalogRecord, CatalogStore, StoredProductState, SyncErrorInput, S
 export class SupabaseCatalogStore implements CatalogStore {
   constructor(private db: SupabaseClient, private opts: { bucket?: string; resolveCategory?: (path: string[]) => Promise<string | null> } = {}) {}
 
+  private reservations: Map<string, number> | null = null;
+  private priceLists: Array<{ id: string; code: string }> | null = null;
+  /** Unidades vendidas en la web que Alegra todavía no descontó (pedido sin facturar). Se cargan una vez por corrida. */
+  private async reserved(sku: string) {
+    if (!this.reservations) {
+      const r = await this.db.rpc("pending_stock_reservations");
+      this.reservations = new Map(((r.data ?? []) as Array<{ sku: string; quantity: number }>).map((x) => [x.sku, Number(x.quantity)]));
+    }
+    return this.reservations.get(sku) ?? 0;
+  }
+
   private must<T>(r: { data: T; error: { message: string } | null }, ctx: string): T {
     if (r.error) throw new Error(`${ctx}: ${r.error.message}`);
     return r.data;
@@ -28,8 +39,8 @@ export class SupabaseCatalogStore implements CatalogStore {
 
   async getStates(skus: string[]) {
     const out = new Map<string, StoredProductState>();
-    for (let i = 0; i < skus.length; i += 500) {
-      const r = await this.db.from("products").select("id, sku, content_hash, product_images(sha256)").in("sku", skus.slice(i, i + 500));
+    for (let i = 0; i < skus.length; i += 100) { // lotes chicos: SKUs largos en ?sku=in.(...) superan el límite de URL
+      const r = await this.db.from("products").select("id, sku, content_hash, product_images(sha256)").in("sku", skus.slice(i, i + 100));
       for (const p of this.must(r, "getStates") as Array<{ id: string; sku: string; content_hash: string | null; product_images: Array<{ sha256: string | null }> }>) {
         out.set(p.sku, { productId: p.id, sku: p.sku, contentHash: p.content_hash ?? "", imageHashes: p.product_images.map((x) => x.sha256 ?? "") });
       }
@@ -38,15 +49,17 @@ export class SupabaseCatalogStore implements CatalogStore {
   }
 
   async upsertProduct(rec: CatalogRecord, contentHash: string, images: ValidatedImage[], usePlaceholder: boolean) {
-    const existing = this.must(await this.db.from("products").select("id, slug, sale_mode_locked").eq("sku", rec.sku).maybeSingle(), "lookup") as
-      | { id: string; slug: string; sale_mode_locked: boolean }
+    const existing = this.must(await this.db.from("products").select("id, slug, sale_mode_locked, legacy_woo_id, primary_category_id").eq("sku", rec.sku).maybeSingle(), "lookup") as
+      | { id: string; slug: string; sale_mode_locked: boolean; legacy_woo_id: number | null; primary_category_id: string | null }
       | null;
     const categoryId = this.opts.resolveCategory ? await this.opts.resolveCategory(rec.categoryPath) : null;
+    // Ficha curada (importada de Woo): el contenido (nombre, categoría, slug) lo manda la ficha; Alegra manda precio, stock y estado.
+    const curated = existing?.legacy_woo_id != null;
     const row: Record<string, unknown> = {
       sku: rec.sku,
-      name: rec.name,
+      ...(curated ? {} : { name: rec.name }),
       status: rec.active ? "active" : "inactive",
-      stock_qty: rec.stock,
+      stock_qty: Math.max(0, rec.stock - (await this.reserved(rec.sku))),
       source: "alegra",
       source_id: rec.sourceId,
       content_hash: contentHash,
@@ -54,12 +67,20 @@ export class SupabaseCatalogStore implements CatalogStore {
       missing_in_source_since: null,
       ...(images.length || usePlaceholder ? { has_placeholder_image: usePlaceholder } : {}), // sin imágenes del origen: no se toca
     };
-    if (categoryId) row.primary_category_id = categoryId;
-    if (!existing) row.slug = slugify(rec.name) || rec.sku.toLowerCase();
-    const up = this.must(await this.db.from("products").upsert(row, { onConflict: "sku" }).select("id").single(), "upsert") as { id: string };
+    if (categoryId && !curated && !existing?.primary_category_id) row.primary_category_id = categoryId;
+    if (!existing) {
+      const base = slugify(rec.name) || rec.sku.toLowerCase();
+      const taken = this.must(await this.db.from("products").select("id").eq("slug", base).maybeSingle(), "slug") as { id: string } | null;
+      row.slug = taken ? `${base}-${slugify(rec.sku)}`.slice(0, 160) : base;
+    }
+    // Existente => UPDATE (un INSERT .. ON CONFLICT exigiría las columnas NOT NULL que la ficha curada no manda)
+    const up = existing
+      ? (this.must(await this.db.from("products").update(row).eq("id", existing.id).select("id").single(), "update") as { id: string })
+      : await this.insertWithUniqueSlug(row, rec.sku);
 
     // precios (sólo listas ARS conocidas; null => se elimina el precio de esa lista, nunca se inventa)
-    const lists = this.must(await this.db.from("price_lists").select("id, code"), "price_lists") as Array<{ id: string; code: string }>;
+    this.priceLists ??= this.must(await this.db.from("price_lists").select("id, code"), "price_lists") as Array<{ id: string; code: string }>;
+    const lists = this.priceLists;
     for (const l of lists) {
       const cents = l.code === "retail" ? rec.retailPriceCents : rec.wholesalePriceCents;
       if (cents && cents > 0) {
@@ -90,6 +111,15 @@ export class SupabaseCatalogStore implements CatalogStore {
       }
     }
     return { productId: up.id, created: !existing };
+  }
+
+  /** Alta con slug único: si dos altas concurrentes chocan por slug, reintenta con el SKU como sufijo. */
+  private async insertWithUniqueSlug(row: Record<string, unknown>, sku: string): Promise<{ id: string }> {
+    const r = await this.db.from("products").insert(row).select("id").single();
+    if (r.error?.code === "23505" && /slug/.test(r.error.message)) {
+      return this.must(await this.db.from("products").insert({ ...row, slug: `${row.slug}-${slugify(sku)}`.slice(0, 160) }).select("id").single(), "insert") as { id: string };
+    }
+    return this.must(r, "insert") as { id: string };
   }
 
   async recordError(jobId: string, e: SyncErrorInput) {

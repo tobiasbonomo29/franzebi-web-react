@@ -1,0 +1,36 @@
+.franzebi-consulta-a-pedido {
+            margin: 14px 0 20px;
+        }
+
+        .franzebi-consulta-a-pedido p {
+            margin: 0 0 8px;
+            font-weight: 600;
+        }
+
+        .franzebi-whatsapp-consulta.button {
+            display: inline-flex !important;
+            align-items: center;
+            justify-content: center;
+            min-height: 46px;
+            padding: 12px 20px !important;
+            border: 0 !important;
+            border-radius: 4px !important;
+            background: #1f9d55 !important;
+            color: #fff !important;
+            text-align: center;
+            line-height: 1.2 !important;
+        }
+
+        .franzebi-whatsapp-consulta.button:hover,
+        .franzebi-whatsapp-consulta.button:focus {
+            background: #187a43 !important;
+            color: #fff !important;
+        }
+
+        @media (max-width: 768px) {
+            .single-product .franzebi-whatsapp-consulta.button,
+            li.product .franzebi-whatsapp-consulta.button {
+                width: 100%;
+                max-width: 100%;
+            }
+        }

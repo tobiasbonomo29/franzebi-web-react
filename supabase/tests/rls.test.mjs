@@ -150,4 +150,30 @@ await db.exec(`update public.order_events set claimed_at = now() - interval '1 h
 r = await one(`select public.requeue_stuck_order_events() n`);
 chk(`eventos colgados vuelven a la cola (${r[0].n})`, r[0].n === 1);
 
+// --- reservas de stock pendientes de facturar (migración 009) ---
+await db.exec(reset);
+r = await one(`select coalesce(sum(quantity),0)::int n from public.pending_stock_reservations()`);
+const pend = r[0].n;
+const reservedOrder = (await one(`select o.id from public.orders o join public.order_items i on i.order_id=o.id where o.status not in ('cancelled','refunded','failed') order by o.number limit 1`))[0]?.id;
+await db.exec(`insert into public.order_events (order_id,sink,event,order_status,dedupe_key,status) values ('${reservedOrder}','astroselling','order.created','on_hold','test-res-sent','sent') on conflict do nothing;`);
+r = await one(`select coalesce(sum(quantity),0)::int n from public.pending_stock_reservations()`);
+chk(`reservas: un pedido ya facturado deja de reservar stock (${pend} → ${r[0].n})`, r[0].n < pend || pend === 0);
+await db.exec(as("anon"));
+await expectErr("anon NO puede leer reservas", `select * from public.pending_stock_reservations()`, /permission denied/);
+await db.exec(reset);
+
+// --- notas del pedido (migración 009) ---
+await db.exec(`insert into public.order_notes (order_id, note, customer_visible) values ('${oid}','interna',false),('${oid}','para el cliente',true);`);
+await db.exec(as("authenticated", U.cust));
+r = await one(`select note from public.order_notes`);
+chk(`cliente ve sólo notas visibles de SUS pedidos (${r.map((x) => x.note).join(",")})`, r.every((x) => x.note === "para el cliente"));
+await expectErr("cliente NO puede escribir notas", `insert into public.order_notes (order_id, note) values ('${oid}','x')`, /permission denied|row-level/);
+await db.exec(reset);
+
+// --- listado de catálogo (catalog_page) respeta RLS ---
+await db.exec(as("anon"));
+r = await one(`select sku from public.catalog_page(null, null, 'menu_order', null, null, 100, 0)`);
+chk(`catalog_page (anon) no devuelve ocultos ni no publicados (${r.length})`, r.every((x) => !/ELEC_/.test(x.sku)));
+await db.exec(reset);
+
 console.log(process.exitCode ? "\nHAY FALLAS" : "\nTODO OK");

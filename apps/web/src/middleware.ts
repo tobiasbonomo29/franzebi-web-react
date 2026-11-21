@@ -3,7 +3,10 @@ import { NextResponse, type NextRequest } from "next/server";
 
 /**
  * 1) Compatibilidad de URLs WordPress/Woo (301):
- *    - /?s=term&post_type=product  -> /buscar/?q=term
+ *    - /?s=term&post_type=product  -> se sirve igual que en WP (la home resuelve la búsqueda)
+ *    - /?add-to-cart=<id>          -> /api/cart/legacy-add (links sin JS de Woo)
+ *    - /?wc-ajax=...               -> 204 (los scripts heredados no deben recibir HTML)
+ *    - /buscar/?q=term             -> /?s=term&post_type=product (URL de la app anterior)
  *    - /?p=ID / ?product_cat=      -> se resuelven por tabla redirects (DB) cuando existan
  *    - /wp-content/uploads/...     -> URL pública de Storage (mapeo product_images.legacy_url) — ver docs/04 Fase 3
  *    - /feed/, /wp-login.php, /wp-admin/ -> 410/404 (no existen en la nueva app)
@@ -31,11 +34,23 @@ async function loadRedirects() {
 
 export async function middleware(req: NextRequest) {
   const url = req.nextUrl;
-  if (url.pathname === "/" && url.searchParams.has("s")) {
-    const to = new URL("/buscar/", url);
-    to.searchParams.set("q", url.searchParams.get("s") ?? "");
+  if (url.searchParams.has("wc-ajax")) return new NextResponse(null, { status: 204 });
+  if (url.pathname === "/" && url.searchParams.has("add-to-cart")) {
+    const to = new URL("/api/cart/legacy-add/", url);
+    to.searchParams.set("id", url.searchParams.get("add-to-cart") ?? "");
+    if (url.searchParams.has("quantity")) to.searchParams.set("quantity", url.searchParams.get("quantity")!);
+    return NextResponse.redirect(to, 302);
+  }
+  if (url.pathname.startsWith("/buscar")) {
+    const to = new URL("/", url);
+    to.search = "";
+    to.searchParams.set("s", url.searchParams.get("q") ?? "");
+    to.searchParams.set("post_type", "product");
     return NextResponse.redirect(to, 301);
   }
+  // Scripts heredados (WhatsApp, Elementor) hacen POST a admin-ajax: respuesta JSON neutra en lugar de HTML/410
+  // ({} vacío: all.min.js de VamTam itera las claves de la respuesta de "vamtam_get_woosw_buttons")
+  if (url.pathname === "/wp-admin/admin-ajax.php") return NextResponse.json({});
   if (/^\/(wp-admin|wp-login\.php|xmlrpc\.php|wp-json)(\/|$)/.test(url.pathname)) return new NextResponse(null, { status: 410 });
   if (/^\/(feed|comments\/feed)\/?$/.test(url.pathname)) return new NextResponse(null, { status: 410 });
 
@@ -65,4 +80,4 @@ export async function middleware(req: NextRequest) {
   return res;
 }
 
-export const config = { matcher: ["/((?!_next/static|_next/image|favicon.svg|placeholder-producto.svg).*)"] };
+export const config = { matcher: ["/((?!_next/static|_next/image|wp-content/|wp-includes/|legacy/|favicon.svg|placeholder-producto.svg).*)"] };

@@ -1,0 +1,8 @@
+.non-interactive {
+            pointer-events: none;
+            background-color: #f0f0f0;
+        }
+        .disabled-checkbox {
+            pointer-events: none;
+            opacity: 0.5;
+        }

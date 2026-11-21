@@ -32,6 +32,14 @@ const schema = z.object({
   ASTROSELLING_ORDER_WEBHOOK_URL: z.string().url().optional(),
   ASTROSELLING_WEBHOOK_SECRET: z.string().optional(),
   ORDER_DISPATCH_ENABLED: z.enum(["true", "false"]).default("false"),
+  // Facturación directa en Alegra (sink "alegra", alternativa a AstroSelling). Ver docs/05.
+  ALEGRA_INVOICE_PRICE_LIST_ID: z.string().optional(),          // lista "MINORISTA"
+  ALEGRA_INVOICE_WHOLESALE_PRICE_LIST_ID: z.string().optional(), // lista "MAYORISTA"
+  ALEGRA_INVOICE_NUMBER_TEMPLATE_ID: z.string().default("3"),    // "TICKET"
+  ALEGRA_INVOICE_WAREHOUSE_ID: z.string().default("1"),          // "Principal"
+  ALEGRA_INVOICE_SHIPPING_ITEM_ID: z.string().optional(),        // ítem "ENVIO" (opcional)
+  ALEGRA_INVOICE_STATUS: z.enum(["open", "draft"]).default("draft"),
+  LEGACY_MEDIA_ORIGIN: z.string().url().optional(),
 });
 
 let cached: z.infer<typeof schema> | null = null;

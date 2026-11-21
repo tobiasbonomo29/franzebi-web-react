@@ -99,3 +99,32 @@ Ver [`supabase/migrations`](../supabase/migrations).
 ## Rendimiento (próximo paso)
 
 Hoy las páginas son `force-dynamic`. Cuando staging tenga datos, conviene pasar catálogo y producto a ISR (`revalidate`) e invalidar por tag cuando el sync escriba.
+
+## Diseño heredado (réplica de franzebi.ar)
+
+La tienda reproduce el sitio WordPress/Elementor/VamTam **con el mismo markup, CSS y scripts de interacción**:
+
+1. `scripts/mirror-legacy.mjs` captura (sólo GET) cada tipo de página del sitio actual: home, shop, categoría, búsqueda, producto, carrito, checkout, mi cuenta, FAQ, contacto y 404. Copia a `apps/web/public/` con las **mismas rutas** (`/wp-content/...`, `/wp-includes/...`) el CSS (kit global, templates de Elementor, theme), las fuentes, las imágenes de diseño, los scripts de Elementor/VamTam (menú, sticky, carruseles, pestañas, toggles, contador, popups, chunks dinámicos) y el botón flotante de WhatsApp. Descarta los scripts de WooCommerce, píxeles y plugins cuya función reemplaza la app.
+2. `scripts/build-legacy-templates.mjs` convierte esas capturas en plantillas (`apps/web/src/legacy/templates/*.json`) con marcadores `<!--fz:…-->` y aplica las reglas del brief: Electrónica fuera del menú, sin `href="#"` y sin "Tecnología" en el footer.
+3. `components/LegacyPage.tsx` arma cada página: misma clase en `<body>`, estilos en el mismo orden, header, contenido, footer y scripts. `lib/legacy/render.ts` genera el HTML dinámico con el markup exacto de WooCommerce (tarjetas, precios `wc_price`, paginación, breadcrumb, galería, mini-carrito, tabla del carrito). Todo dato dinámico se escapa.
+4. `public/legacy/fz.js` reemplaza a los scripts de Woo: agregar al carrito, cantidades, mini-carrito ("cart fragments"), carrito, contacto, login y registro. Siempre habla con la API propia, y precios, stock y reglas los decide el servidor.
+5. Checkout, nueva contraseña: componentes React montados (portal) dentro del markup heredado.
+
+Para refrescar el diseño tras cambios en WP: `node scripts/mirror-legacy.mjs && node scripts/build-legacy-templates.mjs`.
+
+## Facturación y stock con Alegra
+
+- **Alegra → tienda:** el sync trae productos, precios (ARABES MINORISTA (pesos) / MAYORISTA) y stock. Resta las unidades vendidas en la web que Alegra todavía no descontó (`pending_stock_reservations()`), así no se sobrevende entre el pedido y la factura. Escribe en paralelo (concurrencia 8).
+- **Tienda → Alegra:** cada pedido encola eventos (outbox) para los sinks de `settings.integrations.orderSinks`:
+  - `astroselling`: webhook compatible con WooCommerce. Hoy AstroSelling factura en Alegra.
+  - `alegra`: factura directa con el mismo formato que la de AstroSelling (ticket X, depósito Principal, lista MINORISTA o MAYORISTA, observación con el número de pedido). Es idempotente y anula la factura si el pedido se cancela. Ver D-27.
+
+## Panel de pedidos (`/admin/pedidos/`)
+
+Lista con pestañas por estado y contadores, búsqueda (número, nombre, email, DNI, teléfono), filtros de entrega y fechas, paginación y exportación CSV. El detalle de cada pedido incluye:
+- cliente, entrega (con sucursal de Correo), pago y productos;
+- cambio de estado y validación de transferencia;
+- WhatsApp y email al cliente, remito imprimible;
+- notas internas o visibles al cliente (aparecen en Mi cuenta);
+- número de seguimiento e importación del envío en MiCorreo;
+- estado de las integraciones (AstroSelling o factura de Alegra) con reintento, e historial.

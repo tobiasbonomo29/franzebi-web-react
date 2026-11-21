@@ -1,0 +1,89 @@
+@media (max-width: 767px) {
+        body.woocommerce-cart td.product-name::before { content: 'Producto:' !important; }
+        body.woocommerce-cart td.product-price::before { content: 'Precio:' !important; }
+        body.woocommerce-cart td.product-quantity::before { content: 'Cantidad:' !important; }
+        body.woocommerce-cart td.product-subtotal::before { content: 'Subtotal:' !important; }
+        body.woocommerce-cart td.product-thumbnail::before,
+        body.woocommerce-cart td.product-remove::before { content: '' !important; }
+        body.woocommerce-cart td.product-thumbnail { justify-content: flex-end !important; min-height: 76px !important; }
+        body.woocommerce-cart td.product-thumbnail img { max-width: 72px !important; height: auto !important; }
+        body.woocommerce-cart td.product-remove { min-height: 52px !important; justify-content: flex-start !important; }
+        body.woocommerce-cart .cart_totals table.shop_table_responsive tr td::before { min-width: 42% !important; }
+
+        body.woocommerce-checkout .elementor-element-2a56346a,
+        body.woocommerce-checkout .elementor-element-2a56346a .elementor-widget-wrap {
+            padding: 14px 20px 0 !important;
+        }
+        body.woocommerce-checkout .elementor-element-2a56346a .elementor-widget-container,
+        body.woocommerce-checkout .elementor-element-2a56346a .elementor-heading-title,
+        body.woocommerce-checkout .elementor-element-2a56346a h1,
+        body.woocommerce-checkout .elementor-element-2a56346a h2,
+        body.woocommerce-checkout .elementor-element-2a56346a h3,
+        body.woocommerce-checkout .elementor-element-2a56346a a,
+        body.woocommerce-checkout .elementor-element-2a56346a span {
+            font-size: 22px !important;
+            line-height: 1.15 !important;
+        }
+        body.woocommerce-checkout .woocommerce form.checkout,
+        body.woocommerce-checkout form.checkout {
+            padding-left: 20px !important;
+            padding-right: 20px !important;
+        }
+        body.woocommerce-checkout form.checkout #customer_details,
+        body.woocommerce-checkout form.checkout #order_review,
+        body.woocommerce-checkout form.checkout #payment,
+        body.woocommerce-checkout form.checkout .woocommerce-checkout-payment {
+            width: 100% !important;
+            max-width: 100% !important;
+            padding: 16px !important;
+            margin-left: 0 !important;
+            margin-right: 0 !important;
+            border-radius: 8px !important;
+        }
+        body.woocommerce-checkout form.checkout .col2-set,
+        body.woocommerce-checkout form.checkout .col-1,
+        body.woocommerce-checkout form.checkout .col-2 {
+            float: none !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            padding: 0 !important;
+            margin: 0 !important;
+        }
+        body.woocommerce-checkout form.checkout h3,
+        body.woocommerce-checkout form.checkout #order_review_heading {
+            font-size: 22px !important;
+            margin: 0 0 14px !important;
+        }
+        body.woocommerce-checkout form.checkout .form-row {
+            margin: 0 0 12px !important;
+        }
+        body.woocommerce-checkout form.checkout .form-row label {
+            font-size: 15px !important;
+            line-height: 1.25 !important;
+            margin: 0 0 5px !important;
+        }
+        body.woocommerce-checkout form.checkout input.input-text,
+        body.woocommerce-checkout form.checkout select,
+        body.woocommerce-checkout form.checkout textarea,
+        body.woocommerce-checkout form.checkout .select2-selection--single {
+            height: 44px !important;
+            min-height: 44px !important;
+            padding: 9px 12px !important;
+            font-size: 16px !important;
+            line-height: 1.25 !important;
+        }
+        body.woocommerce-checkout form.checkout textarea {
+            height: 88px !important;
+        }
+        body.woocommerce-checkout form.checkout input::placeholder,
+        body.woocommerce-checkout form.checkout textarea::placeholder {
+            font-size: 16px !important;
+            line-height: 1.25 !important;
+        }
+        body.woocommerce-checkout .woocommerce-info,
+        body.woocommerce-checkout .woocommerce-message,
+        body.woocommerce-checkout .woocommerce-error {
+            margin-left: 20px !important;
+            margin-right: 20px !important;
+        }
+    }

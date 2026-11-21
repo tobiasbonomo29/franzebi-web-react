@@ -1,0 +1,18 @@
+@font-face {
+				font-family: 'icomoon';
+				src: url("/wp-content/themes/vamtam-debebe/vamtam/assets/fonts/icons/icomoon.woff2") format('woff2'),
+					 url("/wp-content/themes/vamtam-debebe/vamtam/assets/fonts/icons/icomoon.woff") format('woff'),
+					 url("/wp-content/themes/vamtam-debebe/vamtam/assets/fonts/icons/icomoon.ttf") format('ttf');
+				font-weight: normal;
+				font-style: normal;
+				font-display: swap;
+			}
+		
+			@font-face {
+				font-family: 'vamtam-theme';
+				src: url("/wp-content/themes/vamtam-debebe/vamtam/assets/fonts/theme-icons/theme-icons.woff2") format('woff2'),
+					url("/wp-content/themes/vamtam-debebe/vamtam/assets/fonts/theme-icons/theme-icons.woff") format('woff');
+				font-weight: normal;
+				font-style: normal;
+				font-display: swap;
+			}

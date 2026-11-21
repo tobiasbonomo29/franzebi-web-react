@@ -16,7 +16,7 @@ class MemStore implements OrderEventStore {
     return this.events.filter((e) => e.status === "pending" || e.status === "failed").slice(0, limit).map((e) => { e.attempts++; e.status = "sending"; return { ...e }; });
   }
   async loadOrder(id: string) { return id === order.id ? order : null; }
-  async markSent(id: number) { this.events.find((e) => e.id === id)!.status = "sent"; }
+  async markSent(ev: OrderEvent) { this.events.find((e) => e.id === ev.id)!.status = "sent"; }
   async markFailed(id: number, error: string, next: Date, dead: boolean) { Object.assign(this.events.find((e) => e.id === id)!, { status: dead ? "dead" : "failed", error, next }); }
 }
 

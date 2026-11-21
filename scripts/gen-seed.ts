@@ -123,7 +123,7 @@ for (const c of cats) {
 const redirects: Array<[string, string, number]> = [
   ["/product-category/perfumeria/fragancias-masculinas/fragancias-masculinas-arabes/", "/product-category/perfumeria/fragancias-masculinas/arabes-masculinas/", 301], // snippet #48
   ["/contact/", "/contacto/", 301],
-  ["/shop/", "/", 301],
+  // /shop/ se mantiene: es el archivo de tienda de Woo (lo enlazan el breadcrumb y "Volver a la tienda")
   ["/wp-sitemap.xml", "/sitemap.xml", 301],
   ["/track-order/", "/mi-cuenta/", 301],
   ["/refund_returns/", "/faq/", 301],

@@ -16,6 +16,13 @@ const nextConfig = {
   images: {
     remotePatterns: [{ protocol: "https", hostname: "*.supabase.co", pathname: "/storage/v1/object/public/**" }],
   },
+  // Fotos de producto heredadas (/wp-content/uploads/...): si no están en public/, se piden al origen legacy
+  // (LEGACY_MEDIA_ORIGIN, p.ej. https://franzebi.ar mientras WP siga online). Antes del cutover se migran a Storage
+  // y esta variable apunta al bucket (ver docs/04-plan-migracion.md).
+  async rewrites() {
+    const origin = process.env.LEGACY_MEDIA_ORIGIN?.replace(/\/$/, "");
+    return { beforeFiles: [], afterFiles: [], fallback: origin ? [{ source: "/wp-content/uploads/:path*", destination: `${origin}/wp-content/uploads/:path*` }] : [] };
+  },
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },

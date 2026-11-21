@@ -47,11 +47,11 @@ describe("cotización de envíos", () => {
   };
   it("retiro siempre disponible, también en zonas excluidas", async () => {
     const r = await quoteShipping({ postcode: "1748", state: "B", city: "General Rodriguez" }, [{ quantity: 1 }], SHIP, correo);
-    expect(r.options.map((o) => o.kind)).toEqual(["local_pickup", "correo_argentino"]);
+    expect(r.options.map((o) => o.kind)).toEqual(["correo_argentino", "local_pickup"]);
   });
-  it("CABA: retiro + moto + horario + correo", async () => {
+  it("CABA: correo + retiro + moto + horario (mismo orden que el checkout de Woo)", async () => {
     const r = await quoteShipping({ postcode: "1414", state: "C", city: "CABA" }, [{ quantity: 1 }], SHIP, correo);
-    expect(r.options.map((o) => o.id)).toEqual(["local_pickup", "moto:verde", "moto_scheduled_caba", "correo:clasico_domicilio"]);
+    expect(r.options.map((o) => o.id)).toEqual(["correo:clasico_domicilio", "local_pickup", "moto:verde", "moto_scheduled_caba"]);
   });
   it("si Correo falla, no rompe el checkout", async () => {
     const r = await quoteShipping({ postcode: "1414", state: "C", city: "CABA" }, [{ quantity: 1 }], SHIP, { quote: async () => { throw new Error("timeout"); } });

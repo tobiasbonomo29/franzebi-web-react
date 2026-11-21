@@ -22,7 +22,10 @@ export interface SinkOrder {
   cashDiscountCents: number;
   totalCents: number;
   note: string | null;
-  items: Array<{ sku: string; name: string; quantity: number; unitPriceCents: number; lineTotalCents: number }>;
+  wholesaleApplied?: boolean;
+  /** Referencias ya obtenidas por sink (p.ej. { alegra: "10714" }) */
+  externalRefs?: Record<string, string>;
+  items: Array<{ sku: string; name: string; quantity: number; unitPriceCents: number; lineTotalCents: number; sourceId?: string | null }>;
 }
 
 export interface OrderEvent {
@@ -41,7 +44,7 @@ export interface OrderSink {
 export interface OrderEventStore {
   claim(limit: number): Promise<OrderEvent[]>;
   loadOrder(orderId: string): Promise<SinkOrder | null>;
-  markSent(eventId: number, externalRef: string | undefined): Promise<void>;
+  markSent(event: OrderEvent, externalRef: string | undefined): Promise<void>;
   markFailed(eventId: number, error: string, nextAttemptAt: Date, dead: boolean): Promise<void>;
 }
 
@@ -76,7 +79,7 @@ export async function dispatchOrderEvents(
     if (!order) { await fail("Pedido inexistente", false); continue; }
     try {
       const r = await sink.send(ev, order);
-      await store.markSent(ev.id, r.externalRef);
+      await store.markSent(ev, r.externalRef);
       res.sent++;
     } catch (e) {
       await fail((e as Error).message, e instanceof SinkError ? e.retryable : true);

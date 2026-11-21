@@ -186,5 +186,8 @@ export async function quoteShipping(
       correoError = e instanceof Error ? e.message : String(e);
     }
   }
+  // Mismo orden que el checkout de WooCommerce: Correo Argentino, retiro por el local, moto, horario específico
+  const rank = (k: ShippingOption["kind"]) => ({ correo_argentino: 0, local_pickup: 1, moto: 2, moto_scheduled_caba: 3 })[k];
+  options.sort((a, b) => rank(a.kind) - rank(b.kind));
   return { options, motoUnavailableReason, correoError };
 }
